@@ -1,24 +1,57 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import os
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from geopy.distance import geodesic
 
+# ====================================
+# PAGE CONFIG
+# ====================================
+
 st.set_page_config(
     page_title="EV Battery Monitoring System",
+    page_icon="⚡",
     layout="wide"
 )
 
-# ==========================
+# ====================================
+# CUSTOM CSS
+# ====================================
+
+st.markdown("""
+<style>
+
+.stApp {
+    background: linear-gradient(
+        135deg,
+        #0f172a,
+        #1e293b
+    );
+}
+
+h1,h2,h3,h4,h5,h6,p,label {
+    color:white !important;
+}
+
+section[data-testid="stSidebar"] {
+    background-color:#111827;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ====================================
 # SIDEBAR
-# ==========================
+# ====================================
+
+st.sidebar.title("⚡ EV Analytics")
 
 menu = st.sidebar.radio(
     "Navigation",
     [
+        "Home",
         "Admin Panel",
         "SOH Prediction",
         "Range Calculation",
@@ -26,13 +59,61 @@ menu = st.sidebar.radio(
     ]
 )
 
-# ==========================
+# ====================================
+# HOME PAGE
+# ====================================
+
+if menu == "Home":
+
+    st.title(
+        "⚡ EV Battery Health Monitoring System"
+    )
+
+    st.markdown("""
+    ### Machine Learning Based EV Analytics Platform
+    """)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "ML Model",
+            "Random Forest"
+        )
+
+    with col2:
+        st.metric(
+            "Prediction",
+            "SOH"
+        )
+
+    with col3:
+        st.metric(
+            "Navigation",
+            "EV Stations"
+        )
+
+    st.markdown("---")
+
+    st.subheader("Project Features")
+
+    st.write("✅ Battery State Of Health Prediction")
+
+    st.write("✅ Battery Health Grade")
+
+    st.write("✅ Remaining Range Estimation")
+
+    st.write("✅ Nearest Charging Station Finder")
+
+    st.write("✅ Streamlit Cloud Deployment")
+
+# ====================================
 # ADMIN PANEL
-# ==========================
+# ====================================
 
-if menu == "Admin Panel":
+elif menu == "Admin Panel":
 
-    st.title("Admin Panel")
+    st.title("📊 Admin Panel")
 
     uploaded_file = st.file_uploader(
         "Upload Battery Dataset",
@@ -43,7 +124,9 @@ if menu == "Admin Panel":
 
         df = pd.read_csv(uploaded_file)
 
-        st.write(df.head())
+        st.subheader("Dataset Preview")
+
+        st.dataframe(df.head())
 
         if st.button("Train Model"):
 
@@ -63,7 +146,8 @@ if menu == "Admin Panel":
             ]
 
             X = df[features]
-            y = df['SOH']
+
+            y = df["SOH"]
 
             X_train, X_test, y_train, y_test = train_test_split(
                 X,
@@ -88,93 +172,112 @@ if menu == "Admin Panel":
             )
 
             st.success(
-                "Model Trained Successfully"
+                "✅ Model Trained Successfully"
             )
 
-# ==========================
+# ====================================
 # SOH PREDICTION
-# ==========================
+# ====================================
 
 elif menu == "SOH Prediction":
 
-    st.title("SOH Prediction")
+    st.title("🔋 Battery SOH Prediction")
 
     cycle = st.number_input(
-        "Cycle Count"
+        "Cycle Count",
+        min_value=0
     )
 
     resistance = st.number_input(
-        "Internal Resistance"
+        "Internal Resistance",
+        min_value=0.0
     )
 
     capacity = st.number_input(
-        "Capacity"
+        "Capacity",
+        min_value=0.0
     )
 
     temperature = st.number_input(
-        "Temperature"
+        "Temperature",
+        min_value=-50.0
     )
 
     voltage = st.number_input(
-        "Voltage"
+        "Voltage",
+        min_value=0.0
     )
 
     if st.button("Predict SOH"):
 
-        model = joblib.load(
-            "soh_model.pkl"
-        )
+        try:
 
-        resistance_per_cycle = (
-            resistance /
-            (cycle + 1)
-        )
+            model = joblib.load(
+                "soh_model.pkl"
+            )
 
-        data = [[
-            cycle,
-            resistance,
-            capacity,
-            resistance_per_cycle,
-            temperature,
-            voltage
-        ]]
+            resistance_per_cycle = (
+                resistance /
+                (cycle + 1)
+            )
 
-        soh = model.predict(
-            data
-        )[0]
+            data = [[
+                cycle,
+                resistance,
+                capacity,
+                resistance_per_cycle,
+                temperature,
+                voltage
+            ]]
 
-        if soh >= 90:
-            grade = "A"
+            soh = model.predict(
+                data
+            )[0]
 
-        elif soh >= 80:
-            grade = "B"
+            if soh >= 90:
+                grade = "A"
 
-        elif soh >= 70:
-            grade = "C"
+            elif soh >= 80:
+                grade = "B"
 
-        else:
-            grade = "D"
+            elif soh >= 70:
+                grade = "C"
 
-        st.success(
-            f"Predicted SOH : {soh:.2f}%"
-        )
+            else:
+                grade = "D"
 
-        st.info(
-            f"Battery Grade : {grade}"
-        )
+            col1, col2 = st.columns(2)
 
-# ==========================
+            with col1:
+                st.metric(
+                    "Predicted SOH",
+                    f"{soh:.2f}%"
+                )
+
+            with col2:
+                st.metric(
+                    "Battery Grade",
+                    grade
+                )
+
+        except:
+            st.error(
+                "Train model first in Admin Panel"
+            )
+
+# ====================================
 # RANGE CALCULATION
-# ==========================
+# ====================================
 
 elif menu == "Range Calculation":
 
     st.title(
-        "Estimated Range Calculation"
+        "🚗 Estimated Range Calculation"
     )
 
     soh = st.number_input(
-        "Predicted SOH (%)"
+        "SOH (%)",
+        value=90.0
     )
 
     battery_percent = st.slider(
@@ -186,39 +289,45 @@ elif menu == "Range Calculation":
 
     battery_capacity = st.number_input(
         "Battery Capacity (kWh)",
-        value=50
+        value=50.0
     )
 
     efficiency = st.number_input(
-        "Vehicle Efficiency (km/kWh)",
-        value=6
+        "Efficiency (km/kWh)",
+        value=6.0
     )
 
-    if st.button("Calculate Range"):
+    if st.button(
+        "Calculate Range"
+    ):
 
         usable_energy = (
-            battery_capacity *
-            (battery_percent/100) *
+            battery_capacity
+            *
+            (battery_percent/100)
+            *
             (soh/100)
         )
 
         range_km = (
-            usable_energy *
+            usable_energy
+            *
             efficiency
         )
 
-        st.success(
-            f"Estimated Range : {range_km:.2f} km"
+        st.metric(
+            "Estimated Range",
+            f"{range_km:.2f} km"
         )
 
-# ==========================
-# NEAREST CHARGING STATION
-# ==========================
+# ====================================
+# CHARGING STATION
+# ====================================
 
 elif menu == "Nearest Charging Station":
 
     st.title(
-        "Nearest Charging Station"
+        "⚡ Nearest Charging Station"
     )
 
     station_file = st.file_uploader(
@@ -254,7 +363,8 @@ elif menu == "Nearest Charging Station":
         )
 
         stations["Distance_km"] = stations.apply(
-            lambda row: geodesic(
+            lambda row:
+            geodesic(
                 current_location,
                 (
                     row["Latitude"],
@@ -269,7 +379,7 @@ elif menu == "Nearest Charging Station":
         ).head(5)
 
         st.subheader(
-            "Top 5 Nearest Stations"
+            "Top 5 Nearest Charging Stations"
         )
 
         st.dataframe(
@@ -281,3 +391,20 @@ elif menu == "Nearest Charging Station":
                 ]
             ]
         )
+
+# ====================================
+# FOOTER
+# ====================================
+
+st.markdown("---")
+
+st.markdown(
+    """
+    <center>
+    ⚡ EV Battery Health Monitoring System<br>
+    Developed by Mukesh M<br>
+    PG Project
+    </center>
+    """,
+    unsafe_allow_html=True
+)
