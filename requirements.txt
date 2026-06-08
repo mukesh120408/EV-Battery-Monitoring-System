@@ -4,4 +4,5 @@ numpy
 scikit-learn
 joblib
 geopy
-geocoder
+folium
+streamlit-folium
